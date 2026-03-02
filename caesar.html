@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Caesar-Scheibe + ASCII (A–Z)</title>
+  <style>
+    :root{
+      --bg1:#f6f7ff;
+      --bg2:#fff7fb;
+      --card:#ffffffcc;
+      --text:#1f2430;
+      --muted:#5b6578;
+      --accent:#7aa7ff;
+      --accent2:#7fe7c4;
+      --border:#e5e8f2;
+      --shadow: 0 10px 28px rgba(31,36,48,.10);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(122,167,255,.28), transparent 55%),
+        radial-gradient(900px 600px at 85% 15%, rgba(127,231,196,.28), transparent 55%),
+        radial-gradient(900px 700px at 45% 95%, rgba(255,123,138,.16), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+    header{
+      max-width:1200px; margin:22px auto 10px; padding:0 18px;
+      display:flex; justify-content:space-between; gap:12px; align-items:flex-end;
+    }
+    header h1{ font-size:18px; margin:0; letter-spacing:.2px; }
+    header p{ margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.35; }
+    .wrap{
+      max-width:1200px; margin: 0 auto 28px; padding:0 18px;
+      display:grid; grid-template-columns: 420px 1fr; gap:16px;
+    }
+    @media (max-width: 980px){ .wrap{ grid-template-columns:1fr; } }
+    .card{
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(8px);
+    }
+    .hd{
+      padding:14px 14px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background: linear-gradient(180deg, rgba(122,167,255,.10), rgba(127,231,196,.06));
+    }
+    .hd strong{ font-size: 13px; letter-spacing:.2px; }
+    .body{ padding: 14px; }
+    label{ font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
+    input, textarea, button{
+      width:100%;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 10px;
+      outline:none;
+    }
+    input[type="range"]{ padding: 0; height: 34px; }
+    textarea{
+      min-height: 88px;
+      resize: vertical;
+      line-height: 1.25;
+      font-family: var(--mono);
+      font-size: 12px;
+      background: #fbfcff;
+    }
+    textarea[readonly]{ background:#f6f7ff; opacity:.95; }
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .btns{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    button{ cursor:pointer; transition: transform .06s ease; }
+    button:active{ transform: translateY(1px); }
+    .primary{
+      border-color: rgba(122,167,255,.70);
+      background: linear-gradient(180deg, rgba(122,167,255,.30), rgba(122,167,255,.12));
+    }
+    .ghost{ background:#fff; }
+    .hint{ color: var(--muted); font-size: 12px; line-height: 1.35; margin-top:10px; }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border); background:#fff;
+      color: var(--muted); font-size: 12px; white-space: nowrap;
+    }
+    .badge.live{
+      border-color: rgba(122,167,255,.65);
+      background: linear-gradient(180deg, rgba(122,167,255,.18), rgba(122,167,255,.06));
+      color:#31406a;
+      font-family: var(--mono);
+    }
+
+    /* Wheel */
+    .wheelWrap{ display:grid; gap:12px; }
+    .wheelBox{
+      display:grid; place-items:center;
+      padding: 14px;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      background:#fbfcff;
+    }
+    .wheelStage{
+      width:min(440px, 100%);
+      aspect-ratio: 1 / 1;
+      position:relative;
+      display:grid;
+      place-items:center;
+    }
+    .ring{
+      position:absolute; inset: 0;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.96), rgba(246,247,255,.90));
+      box-shadow: inset 0 0 0 12px rgba(122,167,255,.06);
+      display:block;
+    }
+    .outerLetters, .innerLetters{
+      position:absolute; inset: 0;
+      border-radius: 50%;
+      transform: rotate(0deg);
+      transition: transform 240ms ease;
+      pointer-events:none;
+    }
+    .innerLetters{
+      inset: 16%;
+      background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.92), rgba(255,247,251,.78));
+      border: 1px solid var(--border);
+      box-shadow: inset 0 0 0 10px rgba(127,231,196,.06);
+    }
+    .letter{
+      position:absolute;
+      left:50%; top:50%;
+      transform-origin: 0 0;
+      font-family: var(--mono);
+      font-weight: 800;
+      font-size: 13px;
+      color:#2d3c66;
+      opacity:.95;
+      user-select:none;
+    }
+    .letter.muted{ color: var(--muted); font-weight:700; opacity:.85; }
+    .center{
+      position:absolute;
+      width: 38%;
+      aspect-ratio: 1/1;
+      border-radius: 50%;
+      border:1px solid var(--border);
+      background:#fff;
+      display:grid;
+      place-items:center;
+      box-shadow: 0 8px 22px rgba(31,36,48,.08);
+      padding: 10px;
+      gap: 6px;
+      text-align:center;
+    }
+    .center .big{
+      font-family: var(--mono);
+      font-weight: 900;
+      font-size: 18px;
+    }
+    .center .small{
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.25;
+    }
+
+    /* Table */
+    .tableWrap{
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius: 16px;
+      background:#fbfcff;
+    }
+    table{
+      border-collapse: collapse;
+      width:100%;
+      min-width: 860px;
+      font-size: 12px;
+    }
+    th, td{
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      vertical-align: top;
+    }
+    th{
+      position: sticky;
+      top: 0;
+      background:#fff;
+      z-index: 1;
+      color: var(--muted);
+      text-align:left;
+    }
+    td.mono{ font-family: var(--mono); }
+    .ok{ color:#2d3c66; font-weight:700; }
+    .warn{ color:#9a4b54; font-weight:700; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>Caesar-Scheibe + ASCII (A–Z)</h1>
+    <p>Schieberegel → dreht die Scheibe. Texteingabe → Verschlüsselung/Entschlüsselung. ASCII wird für Großbuchstaben angezeigt.</p>
+  </div>
+  <div class="badge live" id="badge">Shift: +3</div>
+</header>
+
+<div class="wrap">
+  <!-- Left -->
+  <section class="card">
+    <div class="hd">
+      <strong>Bedienung</strong>
+      <span class="badge" id="count">0 Zeichen</span>
+    </div>
+    <div class="body">
+      <div class="row">
+        <div>
+          <label>Shift (Caesar-Verschiebung)</label>
+          <input id="shift" type="range" min="-13" max="13" step="1" value="3" />
+          <div class="hint">Positive Werte verschlüsseln (z. B. +3), negative Werte entschlüsseln (z. B. −3).</div>
+        </div>
+        <div>
+          <label>Beispiele</label>
+          <button class="ghost" id="btnExample">Beispiel laden (CODE)</button>
+          <div class="hint">Tipp: Großbuchstaben A–Z werden verschoben. Leerzeichen bleiben.</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <label>Text (Eingabe)</label>
+      <textarea id="in" placeholder="z.B. HALLO WELT"></textarea>
+
+      <div class="btns">
+        <button class="primary" id="btnEncrypt">Verschlüsseln (mit Shift)</button>
+        <button class="ghost" id="btnDecrypt">Entschlüsseln (mit −Shift)</button>
+        <button class="ghost" id="btnUpper">In GROSSBUCHSTABEN</button>
+        <button class="ghost" id="btnCopyOut">Ausgabe kopieren</button>
+        <button class="ghost" id="btnClear">Leeren</button>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <label>Ausgabe (Ergebnis)</label>
+      <textarea id="out" readonly placeholder="Hier erscheint der Ergebnistext…"></textarea>
+
+      <div class="hint">
+        <span class="ok">A–Z</span> werden per Caesar verschoben. Andere Zeichen werden übernommen (<span class="warn">keine</span> Verschiebung).
+      </div>
+    </div>
+  </section>
+
+  <!-- Right -->
+  <section class="card">
+    <div class="hd">
+      <strong>Caesar-Scheibe & ASCII-Ansicht</strong>
+      <span class="badge" id="mode">Modus: Verschlüsseln</span>
+    </div>
+    <div class="body wheelWrap">
+
+      <div class="wheelBox">
+        <div class="wheelStage" aria-label="Caesar-Scheibe">
+          <span class="ring"></span>
+          <div class="outerLetters" id="outer"></div>
+          <div class="innerLetters" id="inner"></div>
+
+          <div class="center">
+            <div class="big" id="centerMap">A → D</div>
+            <div class="small" id="centerInfo">ASCII: 65 (1000001) → 68 (1000100)</div>
+          </div>
+        </div>
+        <div class="hint">
+          Außen: Klartext A–Z. Innen: Geheimtext A–Z (gedreht um den Shift). Das zeigt, wie die Caesar-Scheibe arbeitet.
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Klartext</th>
+              <th>ASCII (Dec)</th>
+              <th>ASCII (Bin 7 Bit)</th>
+              <th>→</th>
+              <th>Ergebnis</th>
+              <th>ASCII (Dec)</th>
+              <th>ASCII (Bin 7 Bit)</th>
+              <th>Hinweis</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="9" style="color:var(--muted)">Noch keine Daten. Gib links Text ein und klicke „Verschlüsseln“.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const A = "A".charCodeAt(0);
+  const Z = "Z".charCodeAt(0);
+  const BITW = 7;
+
+  const el = (id) => document.getElementById(id);
+
+  const shift = el("shift");
+  const badge = el("badge");
+  const count = el("count");
+  const modeBadge = el("mode");
+
+  const inBox = el("in");
+  const outBox = el("out");
+
+  const btnExample = el("btnExample");
+  const btnEncrypt = el("btnEncrypt");
+  const btnDecrypt = el("btnDecrypt");
+  const btnUpper = el("btnUpper");
+  const btnCopyOut = el("btnCopyOut");
+  const btnClear = el("btnClear");
+
+  const outer = el("outer");
+  const inner = el("inner");
+  const centerMap = el("centerMap");
+  const centerInfo = el("centerInfo");
+  const tbody = el("tbody");
+
+  let currentMode = "encrypt"; // encrypt | decrypt
+
+  function toBin7(n){
+    const v = n & ((1<<BITW)-1);
+    return v.toString(2).padStart(BITW, "0");
+  }
+
+  function mod(n, m){
+    return ((n % m) + m) % m;
+  }
+
+  function caesarChar(ch, k){
+    const c = ch.charCodeAt(0);
+    if(c >= A && c <= Z){
+      const pos = c - A;
+      const shifted = mod(pos + k, 26);
+      return String.fromCharCode(A + shifted);
+    }
+    return ch; // keep as-is
+  }
+
+  function caesarText(text, k){
+    let out = "";
+    for(const ch of text){
+      out += caesarChar(ch, k);
+    }
+    return out;
+  }
+
+  function signed(n){
+    return (n >= 0 ? "+" : "") + n;
+  }
+
+  function setMode(m){
+    currentMode = m;
+    modeBadge.textContent = m === "encrypt" ? "Modus: Verschlüsseln" : "Modus: Entschlüsseln";
+  }
+
+  function updateBadge(){
+    const k = Number(shift.value);
+    badge.textContent = `Shift: ${signed(k)}`;
+  }
+
+  function renderWheel(){
+    const k = Number(shift.value);
+    // Outer is fixed; inner rotates opposite direction so mapping looks like a wheel
+    // If shift is +3, then inner alphabet should be shifted by +3 relative to outer.
+    // Visually: rotate inner ring by (k * 360/26).
+    const deg = (k * 360) / 26;
+    inner.style.transform = `rotate(${deg}deg)`;
+  }
+
+  function placeLetters(container, radiusPct, cls){
+    container.innerHTML = "";
+    const R = radiusPct; // in % of container
+    for(let i=0;i<26;i++){
+      const ang = (i * 360) / 26 - 90; // start top
+      const letter = String.fromCharCode(A + i);
+      const d = document.createElement("div");
+      d.className = "letter " + (cls || "");
+      d.textContent = letter;
+      // translate: place on circle
+      // transform: rotate(ang) translate(r) rotate(-ang) for upright letters
+      d.style.transform = `rotate(${ang}deg) translate(${R}%) rotate(${-ang}deg)`;
+      container.appendChild(d);
+    }
+  }
+
+  function updateCenter(){
+    const k = Number(shift.value);
+    const plain = "A";
+    const cipher = caesarChar(plain, k);
+    centerMap.textContent = `${plain} → ${cipher}`;
+    const pDec = plain.charCodeAt(0);
+    const cDec = cipher.charCodeAt(0);
+    // ASCII shown as 7-bit for didactics; values are 65–90 anyway.
+    centerInfo.textContent = `ASCII: ${pDec} (${toBin7(pDec)}) → ${cDec} (${toBin7(cDec)})`;
+  }
+
+  function renderTable(inputText, outputText){
+    const txt = inputText || "";
+    tbody.innerHTML = "";
+    if(txt.length === 0){
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 9;
+      td.style.color = "var(--muted)";
+      td.textContent = "Noch keine Daten. Gib links Text ein und klicke „Verschlüsseln“.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
+
+    const k = Number(shift.value);
+    for(let i=0;i<txt.length;i++){
+      const p = txt[i];
+      const c = outputText[i] ?? "";
+      const tr = document.createElement("tr");
+
+      const td0 = document.createElement("td"); td0.textContent = String(i+1);
+
+      const td1 = document.createElement("td"); td1.className="mono"; td1.textContent = p;
+      const td2 = document.createElement("td"); td2.className="mono";
+      const td3 = document.createElement("td"); td3.className="mono";
+      const td4 = document.createElement("td"); td4.textContent = "→";
+      const td5 = document.createElement("td"); td5.className="mono"; td5.textContent = c;
+      const td6 = document.createElement("td"); td6.className="mono";
+      const td7 = document.createElement("td"); td7.className="mono";
+      const td8 = document.createElement("td");
+
+      const pCode = p.charCodeAt(0);
+      const cCode = c ? c.charCodeAt(0) : NaN;
+
+      const isAZ = (pCode >= A && pCode <= Z);
+
+      if(isAZ){
+        td2.textContent = String(pCode);
+        td3.textContent = toBin7(pCode);
+        td6.textContent = String(cCode);
+        td7.textContent = toBin7(cCode);
+        td8.innerHTML = `<span class="ok">verschoben (${signed(currentMode==="encrypt" ? k : -k)})</span>`;
+      } else {
+        td2.textContent = "—";
+        td3.textContent = "—";
+        td6.textContent = "—";
+        td7.textContent = "—";
+        td8.innerHTML = `<span class="warn">unverändert</span>`;
+      }
+
+      [td0,td1,td2,td3,td4,td5,td6,td7,td8].forEach(td => tr.appendChild(td));
+      tbody.appendChild(tr);
+    }
+  }
+
+  function applyEncrypt(){
+    setMode("encrypt");
+    const k = Number(shift.value);
+    const input = inBox.value || "";
+    const out = caesarText(input, k);
+    outBox.value = out;
+    count.textContent = `${input.length} Zeichen`;
+    renderTable(input, out);
+  }
+
+  function applyDecrypt(){
+    setMode("decrypt");
+    const k = Number(shift.value);
+    const input = inBox.value || "";
+    // decrypt = shift by -k
+    const out = caesarText(input, -k);
+    outBox.value = out;
+    count.textContent = `${input.length} Zeichen`;
+    renderTable(input, out);
+  }
+
+  // Events
+  shift.addEventListener("input", () => {
+    updateBadge();
+    renderWheel();
+    updateCenter();
+    // keep output consistent with current mode (live update)
+    if(currentMode === "encrypt") applyEncrypt();
+    else applyDecrypt();
+  });
+
+  btnExample.addEventListener("click", () => {
+    inBox.value = "CODE";
+    applyEncrypt();
+  });
+
+  btnEncrypt.addEventListener("click", applyEncrypt);
+  btnDecrypt.addEventListener("click", applyDecrypt);
+
+  btnUpper.addEventListener("click", () => {
+    inBox.value = (inBox.value || "").toUpperCase();
+  });
+
+  btnCopyOut.addEventListener("click", async () => {
+    const txt = outBox.value || "";
+    try{
+      await navigator.clipboard.writeText(txt);
+      btnCopyOut.textContent = "Kopiert ✓";
+      setTimeout(()=> btnCopyOut.textContent="Ausgabe kopieren", 900);
+    } catch {
+      outBox.focus();
+      outBox.select();
+      document.execCommand("copy");
+    }
+  });
+
+  btnClear.addEventListener("click", () => {
+    inBox.value = "";
+    outBox.value = "";
+    count.textContent = "0 Zeichen";
+    renderTable("", "");
+  });
+
+  // Init wheel letters
+  placeLetters(outer, 46, "");          // outer ring letters radius
+  placeLetters(inner, 34, "muted");     // inner ring letters radius
+  updateBadge();
+  renderWheel();
+  updateCenter();
+  renderTable("", "");
+})();
+</script>
+</body>
+</html>
